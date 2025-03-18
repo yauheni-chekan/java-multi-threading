@@ -1,3 +1,4 @@
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +49,7 @@ public class ThreadDemo {
             try {
                 for (int i = 0; i < 10; i++) {
                     logger.info("Thread-3 running using Lambda");
-                    TimeUnit.MILLISECONDS.sleep(100);
+                    TimeUnit.MILLISECONDS.sleep(50);
                 }
             } catch (InterruptedException e) {
                 logger.error("Thread was interrupted!", e);
@@ -60,10 +61,6 @@ public class ThreadDemo {
         // Wait for threads to finish
         try {
             thread1.join();
-        } catch (InterruptedException e) {
-            logger.error("Thread was interrupted!", e);
-        }
-        try {
             thread2.join();
         } catch (InterruptedException e) {
             logger.error("Thread was interrupted!", e);

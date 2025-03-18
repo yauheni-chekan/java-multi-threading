@@ -11,7 +11,7 @@ public class Interruption {
        Thread sleepingThread = new Thread(() -> {
            try {
                logger.info("Thread is going to sleep for 10 seconds...");
-               TimeUnit.SECONDS.sleep(10); // Sleep for 10 seconds
+               TimeUnit.SECONDS.sleep(10);
                logger.info("Thread woke up naturally!");
            } catch (InterruptedException e) {
                logger.error("Thread was interrupted!", e);

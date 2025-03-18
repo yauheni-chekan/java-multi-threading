@@ -4,16 +4,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ParametrizedThread {
-    private final String[] messages;
     private final String threadName;
     private static final Logger logger = LogManager.getLogger(ParametrizedThread.class);
 
-    public ParametrizedThread(String threadName, String[] messages) {
+    public ParametrizedThread(String threadName) {
         this.threadName = threadName;
-        this.messages = messages;
     }
 
-    public void start() {
+    public void start(String[] messages) {
         Thread thread = new Thread(() -> {
             logger.info("Thread " + threadName + " started");
             for (String message : messages) {
@@ -43,8 +41,8 @@ public class ParametrizedThread {
             }
             
             // Create and start the thread
-            ParametrizedThread paramThread = new ParametrizedThread("Thread-" + i, messages);
-            paramThread.start();
+            ParametrizedThread paramThread = new ParametrizedThread("Thread-" + i);
+            paramThread.start(messages);
         }
     }
 }
