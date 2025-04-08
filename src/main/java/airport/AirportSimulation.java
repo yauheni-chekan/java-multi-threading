@@ -7,13 +7,19 @@ import java.util.concurrent.TimeUnit;
 import airport.config.AirportConfig;
 import airport.control.ControlTower;
 import airport.model.Plane;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AirportSimulation {
+    private static final Logger logger = LoggerFactory.getLogger(AirportSimulation.class.getName());
+
     public static void main(String[] args) {
         try {
             // Load configuration
             AirportConfig config = new AirportConfig();
-            ControlTower controlTower = new ControlTower(config);
+            
+            // Get the singleton instance of ControlTower
+            ControlTower controlTower = ControlTower.getInstance(config);
             
             // Create thread pool
             ExecutorService executorService = Executors.newCachedThreadPool();
@@ -26,9 +32,9 @@ public class AirportSimulation {
             executorService.awaitTermination(1, TimeUnit.HOURS);
             
         } catch (IOException e) {
-            System.err.println("Error loading configuration: " + e.getMessage());
+            logger.error("Error loading configuration: " + e.getMessage());
         } catch (InterruptedException e) {
-            System.err.println("Simulation interrupted: " + e.getMessage());
+            logger.error("Simulation interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();
         }
     }

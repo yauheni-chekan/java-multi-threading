@@ -1,7 +1,9 @@
 package airport.model;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import airport.control.ControlTower;
-import airport.util.Logger;
 
 public class Plane implements Runnable {
     public enum Size { 
@@ -20,6 +22,7 @@ public class Plane implements Runnable {
         }
     }
 
+    private static final Logger logger = LoggerFactory.getLogger(Plane.class.getName());
     private final String id;
     private final Size size;
     private final ControlTower controlTower;
@@ -41,56 +44,56 @@ public class Plane implements Runnable {
                 handleDeparture();
             }
         } catch (InterruptedException e) {
-            Logger.log(String.format("Plane %s operation interrupted", id));
+            logger.error("Plane {} operation interrupted", id);
             Thread.currentThread().interrupt();
         }
     }
 
     private void handleArrival() throws InterruptedException {
         // Request landing
-        Logger.log(String.format("Plane %s requesting landing clearance", id));
+        logger.info("Plane {} requesting landing clearance", id);
         controlTower.requestLanding();
-        Logger.log(String.format("Plane %s cleared for landing", id));
+        logger.info("Plane {} cleared for landing", id);
         
         // Landing
         Thread.sleep(size.getServiceTime() / 2);
-        Logger.log(String.format("Plane %s has landed", id));
+        logger.info("Plane {} has landed", id);
         controlTower.finishLanding();
 
         // Request parking
         int parkingSpot = controlTower.requestParking();
-        Logger.log(String.format("Plane %s assigned to parking spot %d", id, parkingSpot));
+        logger.info("Plane {} assigned to parking spot {}", id, parkingSpot);
         
         // Ground service
         controlTower.requestGroundService();
-        Logger.log(String.format("Plane %s starting ground service", id));
+        logger.info("Plane {} starting ground service", id);
         Thread.sleep(size.getServiceTime());
         controlTower.finishGroundService();
         
         // Release parking
         controlTower.releaseParking(parkingSpot);
-        Logger.log(String.format("Plane %s completed all operations", id));
+        logger.info("Plane {} completed all operations", id);
     }
 
     private void handleDeparture() throws InterruptedException {
         // Request parking
         int parkingSpot = controlTower.requestParking();
-        Logger.log(String.format("Plane %s preparing for departure at spot %d", id, parkingSpot));
+        logger.info("Plane {} preparing for departure at spot {}", id, parkingSpot);
         
         // Ground service
         controlTower.requestGroundService();
-        Logger.log(String.format("Plane %s starting pre-flight service", id));
+        logger.info("Plane {} starting pre-flight service", id);
         Thread.sleep(size.getServiceTime());
         controlTower.finishGroundService();
         
         // Request takeoff
         controlTower.requestLanding(); // Using same runway semaphore
-        Logger.log(String.format("Plane %s cleared for takeoff", id));
+        logger.info("Plane {} cleared for takeoff", id);
         Thread.sleep(size.getServiceTime() / 2);
         controlTower.finishLanding();
         
         // Release parking
         controlTower.releaseParking(parkingSpot);
-        Logger.log(String.format("Plane %s has departed", id));
+        logger.info("Plane {} has departed", id);
     }
 }
