@@ -6,42 +6,71 @@ import org.slf4j.LoggerFactory;
 import airport.control.ControlTower;
 
 public class Plane implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(Plane.class);
+    
     public enum Size { 
-        SMALL(2000), 
-        MEDIUM(3000), 
-        LARGE(4000);
+        SMALL(2000, 5000), 
+        MEDIUM(3000, 7000), 
+        LARGE(4000, 9000);
         
         private final int serviceTime;
+        private final int cruisingTime;
         
-        Size(int serviceTime) {
+        Size(int serviceTime, int cruisingTime) {
             this.serviceTime = serviceTime;
+            this.cruisingTime = cruisingTime;
         }
         
         public int getServiceTime() {
             return serviceTime;
         }
+
+        public int getCruisingTime() {
+            return cruisingTime;
+        }
     }
 
-    private static final Logger logger = LoggerFactory.getLogger(Plane.class.getName());
     private final String id;
     private final Size size;
-    private final ControlTower controlTower;
-    private final boolean isArriving;
+    private Airport currentAirport;
+    private FlightPhase phase;
 
-    public Plane(String id, Size size, ControlTower controlTower, boolean isArriving) {
+    public Plane(String id, Size size) {
         this.id = id;
         this.size = size;
-        this.controlTower = controlTower;
-        this.isArriving = isArriving;
+        this.phase = FlightPhase.CRUISING;
+    }
+
+    public void setDestination(Airport airport) {
+        if (phase != FlightPhase.CRUISING) {
+            throw new IllegalStateException("Can't change destination while not cruising");
+        }
+        this.currentAirport = airport;
+        this.phase = FlightPhase.APPROACHING;
+        logger.info("Plane {} approaching {}", id, airport.getName());
+    }
+
+    private void startCruising() {
+        this.currentAirport = null;
+        this.phase = FlightPhase.CRUISING;
+        logger.info("Plane {} now cruising", id);
     }
 
     @Override
     public void run() {
         try {
-            if (isArriving) {
-                handleArrival();
-            } else {
-                handleDeparture();
+            while (!Thread.interrupted()) {
+                switch (phase) {
+                    case APPROACHING -> handleLanding();
+                    case LANDED -> handleGroundOperations();
+                    case DEPARTING -> handleTakeoff();
+                    case CRUISING -> {
+                        // Simulate cruising time
+                        Thread.sleep(size.getCruisingTime());
+                        // In a real system, this would be triggered by reaching destination
+                        // For simulation, we could inject next destination here
+                    }
+                }
             }
         } catch (InterruptedException e) {
             logger.error("Plane {} operation interrupted", id);
@@ -49,51 +78,74 @@ public class Plane implements Runnable {
         }
     }
 
-    private void handleArrival() throws InterruptedException {
-        // Request landing
-        logger.info("Plane {} requesting landing clearance", id);
-        controlTower.requestLanding();
-        logger.info("Plane {} cleared for landing", id);
-        
-        // Landing
-        Thread.sleep(size.getServiceTime() / 2);
-        logger.info("Plane {} has landed", id);
-        controlTower.finishLanding();
+    private void handleLanding() throws InterruptedException {
+        if (currentAirport == null) {
+            throw new IllegalStateException("No airport set for landing");
+        }
 
-        // Request parking
-        int parkingSpot = controlTower.requestParking();
-        logger.info("Plane {} assigned to parking spot {}", id, parkingSpot);
+        ControlTower tower = currentAirport.getControlTower();
         
-        // Ground service
-        controlTower.requestGroundService();
-        logger.info("Plane {} starting ground service", id);
-        Thread.sleep(size.getServiceTime());
-        controlTower.finishGroundService();
-        
-        // Release parking
-        controlTower.releaseParking(parkingSpot);
-        logger.info("Plane {} completed all operations", id);
+        // Request landing clearance
+        logger.info("Plane {} requesting landing clearance at {}", id, currentAirport.getName());
+        tower.requestLanding();
+        try {
+            logger.info("Plane {} cleared for landing at {}", id, currentAirport.getName());
+            Thread.sleep(size.getServiceTime() / 2);
+            phase = FlightPhase.LANDED;
+            logger.info("Plane {} has landed at {}", id, currentAirport.getName());
+        } finally {
+            tower.finishLanding();
+        }
     }
 
-    private void handleDeparture() throws InterruptedException {
-        // Request parking
-        int parkingSpot = controlTower.requestParking();
-        logger.info("Plane {} preparing for departure at spot {}", id, parkingSpot);
+    private void handleGroundOperations() throws InterruptedException {
+        ControlTower tower = currentAirport.getControlTower();
+        int parkingSpot = tower.requestParking();
         
-        // Ground service
-        controlTower.requestGroundService();
-        logger.info("Plane {} starting pre-flight service", id);
-        Thread.sleep(size.getServiceTime());
-        controlTower.finishGroundService();
+        try {
+            logger.info("Plane {} assigned to parking spot {} at {}", 
+                       id, parkingSpot, currentAirport.getName());
+            
+            tower.requestGroundService();
+            try {
+                logger.info("Plane {} starting ground service", id);
+                Thread.sleep(size.getServiceTime());
+                // After ground service, prepare for departure
+                phase = FlightPhase.DEPARTING;
+            } finally {
+                tower.finishGroundService();
+            }
+        } finally {
+            tower.releaseParking(parkingSpot);
+        }
+    }
+
+    private void handleTakeoff() throws InterruptedException {
+        ControlTower tower = currentAirport.getControlTower();
         
-        // Request takeoff
-        controlTower.requestLanding(); // Using same runway semaphore
-        logger.info("Plane {} cleared for takeoff", id);
-        Thread.sleep(size.getServiceTime() / 2);
-        controlTower.finishLanding();
-        
-        // Release parking
-        controlTower.releaseParking(parkingSpot);
-        logger.info("Plane {} has departed", id);
+        logger.info("Plane {} requesting takeoff clearance from {}", 
+                   id, currentAirport.getName());
+        tower.requestLanding(); // Using runway for takeoff
+        try {
+            logger.info("Plane {} cleared for takeoff from {}", 
+                       id, currentAirport.getName());
+            Thread.sleep(size.getServiceTime() / 2);
+            startCruising(); // Reset airport and change phase to CRUISING
+            logger.info("Plane {} has departed from {}", id, currentAirport.getName());
+        } finally {
+            tower.finishLanding();
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public Size getSize() {
+        return size;
+    }
+
+    public FlightPhase getPhase() {
+        return phase;
     }
 }

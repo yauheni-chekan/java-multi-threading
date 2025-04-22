@@ -34,6 +34,10 @@ buildNumber.properties
 .project
 .factorypath
 
+# Cursor
+.cursorrules
+.cursor/
+
 # IntelliJ IDEA
 .idea/
 *.iml
