@@ -1,12 +1,19 @@
 package airport;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-import airport.config.AirportConfig;
 import airport.model.Airport;
 import airport.model.Plane;
+import airport.model.Route;
+import airport.factory.impl.AirportFactory;
+import airport.factory.impl.PlaneFactory;
+import airport.factory.impl.RouteFactory;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,53 +22,45 @@ public class AirportSimulation {
 
     public static void main(String[] args) {
         try {
-            // Load configuration
-            AirportConfig config = new AirportConfig();
-            
-            // Create airports
-            Airport jfk = new Airport("JFK", config);
-            Airport lax = new Airport("LAX", config);
-            
+            // Load airports from CSV using path from properties file
+            java.util.Properties props = new java.util.Properties();
+            try (java.io.InputStream in = AirportSimulation.class.getClassLoader()
+                    .getResourceAsStream("airport_sim.properties")) {
+                if (in == null) {
+                    throw new IOException("Could not find airport_sim.properties in resources.");
+                }
+                props.load(in);
+            }
+            String airportsCsvPath = props.getProperty("files.airports");
+            String routesCsvPath = props.getProperty("files.routes");
+            String planesCsvPath = props.getProperty("files.planes");
+            AirportFactory airportFactory = new AirportFactory();
+            List<Airport> airports = airportFactory.loadFromCSV(airportsCsvPath);
+            logger.info("Loaded {} airports: {}", airports.size(), airports.stream().map(Airport::getName).collect(Collectors.joining(", ")));
+
+            // Create routes
+            RouteFactory routeFactory = new RouteFactory();
+            Map<String, Route> routes = routeFactory.loadFromCSV(routesCsvPath, airportFactory::getInstance);
+            logger.info("Loaded {} routes: {}", routes.size(), routes.keySet().stream().map(String::valueOf).collect(Collectors.joining(", ")));
+
             // Create thread pool
             ExecutorService executorService = Executors.newCachedThreadPool();
-            
+            PlaneFactory planeFactory = new PlaneFactory();
+            List<Plane> planes = planeFactory.loadFromCSV(planesCsvPath, routes);
+            logger.info("Loaded {} planes: {}", planes.size(), planes.stream().map(Plane::getId).collect(Collectors.joining(", ")));
+
             // Create and start planes
-            createPlanes(config, jfk, lax, executorService);
+            for (Plane plane : planes) {
+                executorService.submit(plane);
+            }
             
             // Shutdown executor and wait for completion
             executorService.shutdown();
             executorService.awaitTermination(1, TimeUnit.HOURS);
             
-        } catch (IOException e) {
-            logger.error("Error loading configuration: " + e.getMessage());
-        } catch (InterruptedException e) {
-            logger.error("Simulation interrupted: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Simulation error: " + e.getMessage());
             Thread.currentThread().interrupt();
-        }
-    }
-
-    private static void createPlanes(AirportConfig config, 
-                                   Airport origin, Airport destination,
-                                   ExecutorService executorService) {
-        // Create small planes
-        for (int i = 0; i < config.getSmallPlanes(); i++) {
-            Plane plane = new Plane("S" + i, Plane.Size.SMALL);
-            plane.setDestination(origin);
-            executorService.submit(plane);
-        }
-        
-        // Create medium planes
-        for (int i = 0; i < config.getMediumPlanes(); i++) {
-            Plane plane = new Plane("M" + i, Plane.Size.MEDIUM);
-            plane.setDestination(origin);
-            executorService.submit(plane);
-        }
-        
-        // Create large planes
-        for (int i = 0; i < config.getLargePlanes(); i++) {
-            Plane plane = new Plane("L" + i, Plane.Size.LARGE);
-            plane.setDestination(origin);
-            executorService.submit(plane);
         }
     }
 }

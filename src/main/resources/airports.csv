@@ -1,0 +1,4 @@
+# id,name,parkingSpots,groundServiceTeams,smallPlanes,mediumPlanes,largePlanes
+JFK,John F. Kennedy International,5,2,3,4,2
+LAX,Los Angeles International,6,3,2,5,3
+ATL,Hartsfield-Jackson Atlanta International,7,2,4,3,2 
