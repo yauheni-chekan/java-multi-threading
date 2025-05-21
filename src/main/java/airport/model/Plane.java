@@ -111,11 +111,12 @@ public class Plane implements Callable<Void> {
                 logger.info("{} -> {}: Starting ground service.", id, currentAirport.getId());
                 TimeUnit.MILLISECONDS.sleep(size.getServiceTime());
             } finally {
+                logger.info("{} -> {}: Finishing ground service.", id, currentAirport.getId());
                 tower.finishGroundService(this);
             }
         } finally {
-            tower.releaseParking(parkingSpot);
             logger.info("{} -> {}: Ground service finished. Releasing parking spot.", id, currentAirport.getId());
+            tower.releaseParking(parkingSpot, this);
         }
     }
 

@@ -50,7 +50,7 @@ public class ControlTower {
     public void finishTakeoff(Plane plane) {
         try {
             runway.release();
-            logger.info("{} -> {}: Takeoff finish confirmed.", airport.getId(), plane.getId());
+            logger.info("{} -> {}: Takeoff finish confirmed. Happy cruising!", airport.getId(), plane.getId());
         } catch (Exception e) {
             logger.error("{} -> {}: Error releasing runway.", airport.getId(), plane.getId());
             throw e;
@@ -71,7 +71,7 @@ public class ControlTower {
     public void finishLanding(Plane plane) {
         try {
             runway.release();
-            logger.info("{} -> {}: Landing finish confirmed.", airport.getId(), plane.getId());
+            logger.info("{} -> {}: Landing finish confirmed. Welcome to the airport!", airport.getId(), plane.getId());
         } catch (Exception e) {
             logger.error("{} -> {}: Error releasing runway.", airport.getId(), plane.getId());
             throw e;
@@ -100,11 +100,12 @@ public class ControlTower {
         return spot;
     }
 
-    public void releaseParking(int spot) throws InterruptedException {
+    public void releaseParking(int spot, Plane plane) throws InterruptedException {
         parkingSpotLock.acquire();
         try {
             parkingSpotAvailable[spot] = true;
             parkingSpots[spot].release();
+            logger.info("{} -> {}: Parking spot released.", airport.getId(), plane.getId());
         } finally {
             parkingSpotLock.release();
         }
@@ -124,7 +125,7 @@ public class ControlTower {
     public void finishGroundService(Plane plane) {
         try {
             groundService.release();
-            logger.info("{} -> {}: Ground service finish confirmed.", airport.getId(), plane.getId());
+            logger.info("{} -> {}: Ground service finish confirmed. Ready for takeoff!", airport.getId(), plane.getId());
         } catch (Exception e) {
             logger.error("{} -> {}: Error releasing ground service.", airport.getId(), plane.getId());
             throw e;

@@ -14,6 +14,7 @@ public class RouteFactory implements Factory<Route> {
     /**
      * Loads routes from a CSV file with columns: routeId,sourceId,destId,distance
      * Returns a map of routeId to Route.
+     * Creates bidirectional routes by default.
      * Implements Factory<Route> interface, but requires airportResolver for correct airport lookup.
      */
     public Map<String, Route> loadFromCSV(String csvPath, Function<String, Airport> airportResolver) throws Exception {
@@ -34,7 +35,17 @@ public class RouteFactory implements Factory<Route> {
                         Airport source = airportResolver.apply(sourceId);
                         Airport dest = airportResolver.apply(destId);
                         if (source != null && dest != null) {
+                            // Create bidirectional route - add both forward and return paths
                             route.addEdge(source, dest, distance);
+                            try {
+                                route.addEdge(dest, source, distance); // Add return path with the same distance
+                            } catch (IllegalArgumentException e) {
+                                // If the destination already exists in the route (common in bidirectional routes),
+                                // we can ignore this specific exception as it means the return path exists
+                                if (!e.getMessage().contains("Destination airport already exists")) {
+                                    throw e;
+                                }
+                            }
                         }
                     }
                 });

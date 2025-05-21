@@ -36,7 +36,12 @@ public class Route {
      * Returns a set of all airports (nodes) in the graph.
      */
     public List<Airport> getAirports() {
-        return Collections.unmodifiableList(new ArrayList<>(adjacencyMap.keySet()));
+        Set<Airport> airports = new HashSet<>();
+        airports.addAll(adjacencyMap.keySet());
+        for (Map<Airport, Double> neighbors : adjacencyMap.values()) {
+            airports.addAll(neighbors.keySet());
+        }
+        return Collections.unmodifiableList(new ArrayList<>(airports));
     }
 
     /**
@@ -47,7 +52,8 @@ public class Route {
     }
 
     /**
-     * Gets the distance between two airports if a direct edge exists, else null.
+     * Gets the distance between two airports if a direct edge exists.
+     * If no direct route exists, throws an exception.
      * Note: the route has to be a single path. No loops allowed.
      */
     public Double getDistance(Airport from) {
@@ -56,9 +62,13 @@ public class Route {
         }
         Map<Airport, Double> neighbors = adjacencyMap.get(from);
         if (neighbors == null) {
-            return 0.0;
+            throw new IllegalStateException("No routes found from " + from.getId());
         }
-        return neighbors.values().stream().reduce(0.0, Double::sum);
+        Double distance = neighbors.get(from);
+        if (distance == null) {
+            throw new IllegalStateException("No direct route found from " + from.getId());
+        }
+        return distance;
     }
 
     @Override
